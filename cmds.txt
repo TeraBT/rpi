@@ -1,0 +1,5 @@
+aarch64-linux-gnu-gcc -O2-mcpu=cortex-a53 -o gol-framebuffer gol-framebuffer.c
+scp gol-framebuffer chris@cogitatiuncula.local:/home/chris/
+ssh chris@cogitatiuncula.local ./gol-framebuffer
+
+make; scp gol-framebuffer chris@cogitatiuncula.local:/home/chris/; ssh chris@cogitatiuncula.local ./gol-framebuffer
