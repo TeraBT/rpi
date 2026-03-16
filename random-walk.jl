@@ -1,18 +1,31 @@
+include("framebuffer-lib.jl")
+
 using Random
 
+
 function random_walk(steps)
-    x = 0
-    trajectory = zeros(steps)
+    x = 1000
+    y = 500
+    traj_x = zeros(Integer, steps)
+    traj_y = zeros(Integer, steps)
 
     for i in 1:steps
         x += rand(Bool) ? 1 : -1
-        trajectory[i] = x
+        y += rand(Bool) ? 1 : -1
+        traj_x[i] = x
+        traj_y[i] = y
     end
 
-    return trajectory
+    return traj_x, traj_y
 end
 
-trajectory = random_walk(10000)
-println(trajectory[1:10])
+traj_x, traj_y = random_walk(10000)
 
-# TODO: Print to framebuffer via C functions.
+fb = open_fb()
+white = get_color(100, 100, 100)
+
+for (x, y) in zip(traj_x, traj_y)
+    paint_pixel(fb, x, y, white)
+end
+
+close_fb(fb)
