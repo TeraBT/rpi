@@ -23,7 +23,7 @@ void paint_grid_onto_screen(uint8_t *grid, uint16_t *fbp,
                             struct fb_var_screeninfo *vinfo,
                             struct fb_fix_screeninfo *finfo);
 
-int main() {
+int main(void) {
 
   int fb = open("/dev/fb0", O_RDWR);
 

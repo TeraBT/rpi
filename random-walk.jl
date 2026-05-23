@@ -19,7 +19,7 @@ function random_walk(steps)
     return traj_x, traj_y
 end
 
-traj_x, traj_y = random_walk(10000)
+traj_x, traj_y = random_walk(1000)
 
 fb = open_fb()
 white = get_color(100, 100, 100)
