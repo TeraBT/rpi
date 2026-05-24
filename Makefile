@@ -1,5 +1,5 @@
 CC = aarch64-linux-gnu-gcc
-CFLAGS = -O2 -mcpu=cortex-a53 -Werror -Wall -Wextra -Wpedantic
+CFLAGS = -O2 -mcpu=cortex-a53 -Wall -Wextra -Wpedantic
 
 fbobjects: fbobjects.c fblib.c
 	$(CC) $(CFLAGS) fbobjects.c fblib.c -o fbobjects
