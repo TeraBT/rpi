@@ -53,6 +53,8 @@ void paint_screen(struct framebuffer *fb, uint16_t color) {
 }
 
 void paint_pixel(struct framebuffer *fb, int x, int y, uint16_t color) {
+  if (x > fb->width || y > fb->height)
+    return;
 
   size_t pos = y * fb->line_length + x * (fb->bits_per_pixel / 8);
   *(fb->fb_ptr + pos / sizeof(*fb->fb_ptr)) = color;
