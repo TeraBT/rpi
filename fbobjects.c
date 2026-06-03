@@ -25,9 +25,8 @@ void disable_raw_mode(void) {
   tcsetattr(STDIN_FILENO, TCSANOW, &current_terminal_settings);
 }
 
-#define THREAD_COUNT 100
-struct object *thread_objects[THREAD_COUNT];
-
+#define OBJECT_COUNT 10
+struct object *objects[OBJECT_COUNT];
 struct object *movable_object;
 
 int rand_range(int min, int max) { return min + rand() % (max - min + 1); }
@@ -49,12 +48,10 @@ int main(void) {
   open_fb(fb);
 
   uint16_t white = get_color(255, 255, 255);
-  uint16_t red = get_color(255, 0, 0);
   uint16_t black = get_color(0, 0, 0);
-
-  int line_coords[] = {0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0};
-
-  struct object *line = &INIT_OBJECT(line_coords);
+  uint16_t red = get_color(255, 0, 0);
+  uint16_t green = get_color(0, 255, 0);
+  uint16_t blue = get_color(0, 0, 255);
 
   int x_start = 1000;
   int y_start = 500;
@@ -63,9 +60,14 @@ int main(void) {
 
   paint_object(fb, square, white);
 
-  size_t thread_indices[THREAD_COUNT];
+  struct object *objects[OBJECT_COUNT];
+  size_t thread_indices[OBJECT_COUNT];
 
-  for (size_t i = 0; i < THREAD_COUNT; i++) {
+  for (size_t i = 0; i < OBJECT_COUNT; i++) {
+    objects[i] = create_circle(rand_range(800, 1200), rand_range(300, 700), 20);
+  }
+
+  for (size_t i = 0; i < OBJECT_COUNT; i++) {
     pthread_t t;
     thread_indices[i] = i;
     pthread_create(&t, NULL, random_walk_dist, &thread_indices[i]);
@@ -114,7 +116,7 @@ void *random_walk_dist(void *args) {
   int y_start = rand_range(300, 700);
   struct object *circle = create_circle(x_start, y_start, 20);
   size_t thread_index = *(size_t *)args;
-  thread_objects[thread_index] = circle;
+  objects[thread_index] = circle;
 
   paint_object(fb, circle, white);
 
@@ -123,8 +125,6 @@ void *random_walk_dist(void *args) {
   int step_size = 10;
 
   while (1) {
-    paint_object(fb, circle, black);
-
     int r_x = rand_range(min, max);
     int r_y = rand_range(min, max);
 
@@ -140,14 +140,17 @@ void *random_walk_dist(void *args) {
     if (r_y == 1)
       y = step_size;
 
-    shift_object(circle, x, y);
-
     size_t distance = get_distance(circle, movable_object);
-    printf("Distance of object %ld to movable object is %ld.\n", thread_index,
-           distance);
 
+    paint_object(fb, circle, black);
+    shift_object(circle, x, y);
     uint16_t color = distance < 100 ? red : blue;
     paint_object(fb, circle, color);
+
+    // printf("Distance of object %ld to movable object is %ld.\n",
+    // thread_index,
+    //        distance);
+
     usleep(200000);
   }
 }
@@ -167,7 +170,7 @@ void *static_dist(void *args) {
   int y_start = rand_range(300, 700);
   struct object *circle = create_circle(x_start, y_start, 20);
   size_t thread_index = *(size_t *)args;
-  thread_objects[thread_index] = circle;
+  objects[thread_index] = circle;
 
   paint_object(fb, circle, white);
 
