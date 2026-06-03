@@ -34,6 +34,7 @@ int rand_range(int min, int max) { return min + rand() % (max - min + 1); }
 void *random_walk(void *args);
 void *static_dist(void *args);
 void *random_walk_dist(void *args);
+void *gravity_fixpoint(void *args);
 
 int main(void) {
   enable_raw_mode();
@@ -55,10 +56,10 @@ int main(void) {
 
   int x_start = 1000;
   int y_start = 500;
-  struct object *square = create_square(x_start, y_start, 20);
+  struct object *square = create_circle(x_start, y_start, 20);
   movable_object = square;
 
-  paint_object(fb, square, white);
+  draw_object(fb, square, white);
 
   struct object *objects[OBJECT_COUNT];
   size_t thread_indices[OBJECT_COUNT];
@@ -70,7 +71,7 @@ int main(void) {
   for (size_t i = 0; i < OBJECT_COUNT; i++) {
     pthread_t t;
     thread_indices[i] = i;
-    pthread_create(&t, NULL, random_walk_dist, &thread_indices[i]);
+    pthread_create(&t, NULL, gravity_fixpoint, &thread_indices[i]);
   }
 
   while (1) {
@@ -79,26 +80,73 @@ int main(void) {
     if (c == 'q')
       break;
     else if (c == 'h') {
-      paint_object(fb, square, black);
+      draw_object(fb, square, black);
       shift_object(square, -5, 0);
     } else if (c == 'l') {
-      paint_object(fb, square, black);
+      draw_object(fb, square, black);
       shift_object(square, 5, 0);
     } else if (c == 'k') {
-      paint_object(fb, square, black);
+      draw_object(fb, square, black);
       shift_object(square, 0, -5);
     } else if (c == 'j') {
-      paint_object(fb, square, black);
+      draw_object(fb, square, black);
       shift_object(square, 0, 5);
     }
 
-    paint_object(fb, square, white);
+    draw_object(fb, square, white);
   }
 
   free(square);
   close_fb(fb);
 
   disable_raw_mode();
+}
+
+void *gravity_fixpoint(void *args) {
+  struct framebuffer framebuffer;
+  struct framebuffer *fb = &framebuffer;
+  open_fb(fb);
+
+  uint16_t white = get_color(255, 255, 255);
+  uint16_t black = get_color(0, 0, 0);
+  uint16_t red = get_color(255, 0, 0);
+  uint16_t green = get_color(0, 255, 0);
+  uint16_t blue = get_color(0, 0, 255);
+
+  int x_start = rand_range(800, 1200);
+  int y_start = rand_range(300, 700);
+  struct object *circle = create_circle(x_start, y_start, 20);
+  size_t thread_index = *(size_t *)args;
+  objects[thread_index] = circle;
+
+  draw_object(fb, circle, white);
+
+  vector speed = {10., 0.};
+  while (1) {
+
+    size_t distance = compute_distance(circle, movable_object);
+    vector pull = compute_gravitational_pull(circle, movable_object);
+    speed.x += pull.x;
+    speed.y += pull.y;
+    draw_object(fb, circle, black);
+    shift_object(circle, speed.x, speed.y);
+    uint16_t color = distance < 100 ? red : blue;
+    draw_object(fb, circle, color);
+    draw_object(fb, movable_object, white);
+
+    // printf("Distance of object %ld to movable object is %ld.\n", thread_index,
+    //        distance);
+
+    // vector directional_vector =
+    //     compute_directional_vector(circle->center, movable_object->center);
+    // printf("Directional vector of object %ld to movable object is (%f, %f).\n",
+    //        thread_index, directional_vector.x, directional_vector.y);
+
+    // printf("Pull of object %ld to movable object is (%f, %f).\n", thread_index,
+    //        pull.x, pull.y);
+
+    usleep(200000);
+  }
 }
 
 void *random_walk_dist(void *args) {
@@ -118,7 +166,7 @@ void *random_walk_dist(void *args) {
   size_t thread_index = *(size_t *)args;
   objects[thread_index] = circle;
 
-  paint_object(fb, circle, white);
+  draw_object(fb, circle, white);
 
   int min = -1;
   int max = 1;
@@ -140,12 +188,12 @@ void *random_walk_dist(void *args) {
     if (r_y == 1)
       y = step_size;
 
-    size_t distance = get_distance(circle, movable_object);
+    size_t distance = compute_distance(circle, movable_object);
 
-    paint_object(fb, circle, black);
+    draw_object(fb, circle, black);
     shift_object(circle, x, y);
     uint16_t color = distance < 100 ? red : blue;
-    paint_object(fb, circle, color);
+    draw_object(fb, circle, color);
 
     // printf("Distance of object %ld to movable object is %ld.\n",
     // thread_index,
@@ -172,17 +220,17 @@ void *static_dist(void *args) {
   size_t thread_index = *(size_t *)args;
   objects[thread_index] = circle;
 
-  paint_object(fb, circle, white);
+  draw_object(fb, circle, white);
 
   while (1) {
-    paint_object(fb, circle, black);
+    draw_object(fb, circle, black);
 
-    size_t distance = get_distance(circle, movable_object);
+    size_t distance = compute_distance(circle, movable_object);
     printf("Distance of object %ld to movable object is %ld.\n", thread_index,
            distance);
 
     uint16_t color = distance < 100 ? red : blue;
-    paint_object(fb, circle, color);
+    draw_object(fb, circle, color);
     usleep(200000);
   }
 }
@@ -203,7 +251,7 @@ void *random_walk(void *args) {
   // struct object *square = create_square(x_start, y_start, 20);
   struct object *circle = create_circle(x_start, y_start, 20);
 
-  paint_object(fb, circle, white);
+  draw_object(fb, circle, white);
 
   int min = -1;
   int max = 1;
@@ -211,7 +259,7 @@ void *random_walk(void *args) {
   int step_size = 10;
 
   while (1) {
-    paint_object(fb, circle, black);
+    draw_object(fb, circle, black);
 
     int r_x = min + rand() % (max - min + 1);
     int r_y = min + rand() % (max - min + 1);
@@ -233,7 +281,7 @@ void *random_walk(void *args) {
     uint16_t color =
         get_color(rand_range(0, 255), rand_range(0, 255), rand_range(0, 255));
 
-    paint_object(fb, circle, color);
+    draw_object(fb, circle, color);
     usleep(200000);
   }
 }

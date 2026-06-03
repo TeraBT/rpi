@@ -33,7 +33,7 @@ void open_fb(struct framebuffer *fb) {
 }
 
 void close_fb(struct framebuffer *fb) {
-  munmap(fb->fb_ptr, fb->height * fb->width);
+  munmap(fb->fb_ptr, fb->height * fb->line_length);
   close(fb->fb_fd);
 }
 
@@ -53,7 +53,10 @@ void paint_screen(struct framebuffer *fb, uint16_t color) {
 }
 
 void paint_pixel(struct framebuffer *fb, int x, int y, uint16_t color) {
-  if (x > fb->width || y > fb->height)
+  if (x < 0 || y < 0)
+    return;
+
+  if ((size_t)x >= fb->width || (size_t)y >= fb->height)
     return;
 
   size_t pos = y * fb->line_length + x * (fb->bits_per_pixel / 8);
