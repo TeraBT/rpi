@@ -37,6 +37,7 @@ void *random_walk(void *args);
 void *static_dist(void *args);
 void *random_walk_dist(void *args);
 void *gravity_fixpoint(void *args);
+void *object_rotation(void *args);
 
 void *global_routine(void *args);
 
@@ -74,7 +75,7 @@ int main(void) {
   for (size_t i = 0; i < OBJECT_COUNT; i++) {
     pthread_t t;
     thread_indices[i] = i;
-    pthread_create(&t, NULL, gravity_fixpoint, &thread_indices[i]);
+    pthread_create(&t, NULL, object_rotation, &thread_indices[i]);
   }
 
   pthread_t t;
@@ -122,6 +123,34 @@ void *global_routine(void *args) {
     }
 
     max_dist = current_max_dist;
+  }
+}
+
+void *object_rotation(void *args) {
+  struct framebuffer framebuffer;
+  struct framebuffer *fb = &framebuffer;
+  open_fb(fb);
+
+  uint16_t white = get_color(255, 255, 255);
+  uint16_t black = get_color(0, 0, 0);
+  uint16_t red = get_color(255, 0, 0);
+  uint16_t green = get_color(0, 255, 0);
+  uint16_t blue = get_color(0, 0, 255);
+
+  int x_start = rand_range(800, 1200);
+  int y_start = rand_range(300, 700);
+  object *rectangle =
+      create_object(x_start, y_start, x_start + 100, y_start + 20);
+  size_t thread_index = *(size_t *)args;
+  objects[thread_index] = rectangle;
+
+  double rotational_degrees = rand() % 2 == 0 ? 5 : -5;
+  draw_object(fb, rectangle, white);
+  while (1) {
+    draw_object(fb, rectangle, black);
+    rotate_object(rectangle, rotational_degrees);
+    draw_object(fb, rectangle, white);
+    usleep(50000);
   }
 }
 

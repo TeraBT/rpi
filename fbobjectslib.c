@@ -5,7 +5,15 @@
 
 #include "fblib.h"
 
-static coord compute_center(struct object *object);
+static coord compute_center(struct object *object) {
+  int x_acc = 0;
+  int y_acc = 0;
+  for (size_t i = 0; i < object->len; i++) {
+    x_acc += object->coords[i].x;
+    y_acc += object->coords[i].y;
+  }
+  return (coord){x_acc / object->len, y_acc / object->len};
+}
 
 struct object *create_object(size_t x_start, size_t y_start, size_t x_end,
                              size_t y_end) {
@@ -93,14 +101,23 @@ void shift_object(struct object *object, int shift_x, int shift_y) {
   object->center.y += shift_y;
 }
 
-static coord compute_center(struct object *object) {
-  int x_acc = 0;
-  int y_acc = 0;
+void rotate_object(object *object, double degrees) {
+  double radians = degrees * 3.141592 / 180;
+  double s = sin(radians);
+  double c = cos(radians);
+  coord center = object->center;
+  
   for (size_t i = 0; i < object->len; i++) {
-    x_acc += object->coords[i].x;
-    y_acc += object->coords[i].y;
+    coord coord_wrt_origin = {object->coords[i].x - center.x,
+                              object->coords[i].y - center.y};
+    coord rotated_coord_wrt_origin = {
+        coord_wrt_origin.x * c - coord_wrt_origin.y * s,
+        coord_wrt_origin.x * s + coord_wrt_origin.y * c};
+
+    coord rotated_coord = {rotated_coord_wrt_origin.x + center.x,
+                           rotated_coord_wrt_origin.y + center.y};
+    object->coords[i] = rotated_coord;
   }
-  return (coord){x_acc / object->len, y_acc / object->len};
 }
 
 size_t compute_distance(struct object *object1, struct object *object2) {

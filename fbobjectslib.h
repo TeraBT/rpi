@@ -33,6 +33,8 @@ void draw_object(struct framebuffer *fb, object *object, uint16_t color);
 
 void shift_object(object *object, int shift_x, int shift_y);
 
+void rotate_object(object *object, double degrees);
+
 size_t compute_distance(object *object1, object *object2);
 
 vector compute_directional_vector(coord coord1, coord coord2);
