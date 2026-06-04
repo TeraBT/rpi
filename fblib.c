@@ -38,8 +38,7 @@ void close_fb(struct framebuffer *fb) {
 }
 
 uint16_t get_color(size_t r, size_t g, size_t b) {
-  return (size_t)(r / 100.0 * 31) << 11 | (size_t)(g / 100.0 * 63) << 5 |
-         (size_t)(b / 100.0 * 31);
+  return (r * 31 / 255) << 11 | (g * 63 / 255) << 5 | (b * 31 / 255);
 }
 
 void paint_screen(struct framebuffer *fb, uint16_t color) {

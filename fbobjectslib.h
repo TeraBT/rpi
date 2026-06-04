@@ -41,4 +41,6 @@ double compute_gravitational_force(object *object1, object *object2);
 
 vector compute_gravitational_pull(object *object1, object *object2);
 
+uint16_t compute_bgr_heatmap(double t);
+
 #endif

@@ -77,9 +77,10 @@ struct object *create_circle(int x_start, int y_start, int radius) {
 }
 
 void draw_object(struct framebuffer *fb, struct object *object,
-                  uint16_t color) {
+                 uint16_t color) {
   for (size_t i = 0; i < object->len; i++) {
-    paint_pixel(fb, round(object->coords[i].x), round(object->coords[i].y), color);
+    paint_pixel(fb, round(object->coords[i].x), round(object->coords[i].y),
+                color);
   }
 }
 
@@ -131,4 +132,22 @@ vector compute_gravitational_pull(object *object1, object *object2) {
       compute_directional_vector(object1->center, object2->center);
   return (vector){directional_vector.x * gravitational_force,
                   directional_vector.y * gravitational_force};
+}
+
+uint16_t compute_bgr_heatmap(double t) {
+
+  uint8_t r, g, b;
+  if (t < 0.5) {
+    double u = t * 2;
+    b = 255 * (1 - u);
+    g = 255 * u;
+    r = 0;
+  } else {
+    double u = (t - 0.5) * 2;
+    b = 0;
+    g = 255 * (1 - u);
+    r = 255 * u;
+  }
+
+  return get_color(r, g, b);
 }

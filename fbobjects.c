@@ -1,3 +1,4 @@
+#include <fcntl.h>
 #include <pthread.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -25,9 +26,10 @@ void disable_raw_mode(void) {
   tcsetattr(STDIN_FILENO, TCSANOW, &current_terminal_settings);
 }
 
-#define OBJECT_COUNT 10
-struct object *objects[OBJECT_COUNT];
-struct object *movable_object;
+#define OBJECT_COUNT 5
+object *objects[OBJECT_COUNT];
+object *movable_object;
+size_t max_dist = 0;
 
 int rand_range(int min, int max) { return min + rand() % (max - min + 1); }
 
@@ -35,6 +37,8 @@ void *random_walk(void *args);
 void *static_dist(void *args);
 void *random_walk_dist(void *args);
 void *gravity_fixpoint(void *args);
+
+void *global_routine(void *args);
 
 int main(void) {
   enable_raw_mode();
@@ -56,12 +60,11 @@ int main(void) {
 
   int x_start = 1000;
   int y_start = 500;
-  struct object *square = create_circle(x_start, y_start, 20);
+  object *square = create_circle(x_start, y_start, 20);
   movable_object = square;
 
   draw_object(fb, square, white);
 
-  struct object *objects[OBJECT_COUNT];
   size_t thread_indices[OBJECT_COUNT];
 
   for (size_t i = 0; i < OBJECT_COUNT; i++) {
@@ -74,23 +77,29 @@ int main(void) {
     pthread_create(&t, NULL, gravity_fixpoint, &thread_indices[i]);
   }
 
-  while (1) {
-    int c = getchar();
+  pthread_t t;
+  pthread_create(&t, NULL, global_routine, NULL);
 
-    if (c == 'q')
-      break;
-    else if (c == 'h') {
-      draw_object(fb, square, black);
-      shift_object(square, -5, 0);
-    } else if (c == 'l') {
-      draw_object(fb, square, black);
-      shift_object(square, 5, 0);
-    } else if (c == 'k') {
-      draw_object(fb, square, black);
-      shift_object(square, 0, -5);
-    } else if (c == 'j') {
-      draw_object(fb, square, black);
-      shift_object(square, 0, 5);
+  fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK);
+  while (1) {
+    char c;
+    if (read(STDIN_FILENO, &c, 1) == 1) {
+
+      if (c == 'q')
+        break;
+      else if (c == 'h') {
+        draw_object(fb, square, black);
+        shift_object(square, -5, 0);
+      } else if (c == 'l') {
+        draw_object(fb, square, black);
+        shift_object(square, 5, 0);
+      } else if (c == 'k') {
+        draw_object(fb, square, black);
+        shift_object(square, 0, -5);
+      } else if (c == 'j') {
+        draw_object(fb, square, black);
+        shift_object(square, 0, 5);
+      }
     }
 
     draw_object(fb, square, white);
@@ -100,6 +109,20 @@ int main(void) {
   close_fb(fb);
 
   disable_raw_mode();
+}
+
+void *global_routine(void *args) {
+  while (1) {
+    int distances[OBJECT_COUNT];
+    int current_max_dist = 0;
+    for (size_t i = 0; i < OBJECT_COUNT; i++) {
+      distances[i] = compute_distance(movable_object, objects[i]);
+      if (distances[i] > current_max_dist)
+        current_max_dist = distances[i];
+    }
+
+    max_dist = current_max_dist;
+  }
 }
 
 void *gravity_fixpoint(void *args) {
@@ -115,7 +138,7 @@ void *gravity_fixpoint(void *args) {
 
   int x_start = rand_range(800, 1200);
   int y_start = rand_range(300, 700);
-  struct object *circle = create_circle(x_start, y_start, 20);
+  object *circle = create_circle(x_start, y_start, 20);
   size_t thread_index = *(size_t *)args;
   objects[thread_index] = circle;
 
@@ -124,25 +147,47 @@ void *gravity_fixpoint(void *args) {
   vector speed = {10., 0.};
   while (1) {
 
+    object *trajectory_object =
+        create_circle(circle->center.x, circle->center.y, 20);
+    object *trajectory_artifact =
+        create_square(circle->center.x, circle->center.y, 4);
+    vector trajectory_speed = speed;
+
+    for (size_t i = 0; i < 20; i++) {
+      vector trajectory_pull =
+          compute_gravitational_pull(trajectory_object, movable_object);
+      trajectory_speed.x += trajectory_pull.x;
+      trajectory_speed.y += trajectory_pull.y;
+      shift_object(trajectory_object, trajectory_speed.x, trajectory_speed.y);
+      shift_object(trajectory_artifact, trajectory_speed.x, trajectory_speed.y);
+      draw_object(fb, trajectory_artifact, red);
+    }
+
     size_t distance = compute_distance(circle, movable_object);
     vector pull = compute_gravitational_pull(circle, movable_object);
     speed.x += pull.x;
     speed.y += pull.y;
+
     draw_object(fb, circle, black);
     shift_object(circle, speed.x, speed.y);
-    uint16_t color = distance < 100 ? red : blue;
+    uint16_t color = compute_bgr_heatmap((double)distance / max_dist);
     draw_object(fb, circle, color);
-    draw_object(fb, movable_object, white);
 
-    // printf("Distance of object %ld to movable object is %ld.\n", thread_index,
+    // printf("i = %ld. Dist. = %ld. Max. dist. = %ld. Rel. dist. = %f\n",
+    //        thread_index, distance, max_dist, (double)distance / max_dist);
+
+    // printf("Distance of object %ld to movable object is %ld.\n",
+    // thread_index,
     //        distance);
 
     // vector directional_vector =
     //     compute_directional_vector(circle->center, movable_object->center);
-    // printf("Directional vector of object %ld to movable object is (%f, %f).\n",
+    // printf("Directional vector of object %ld to movable object is (%f,
+    // %f).\n",
     //        thread_index, directional_vector.x, directional_vector.y);
 
-    // printf("Pull of object %ld to movable object is (%f, %f).\n", thread_index,
+    // printf("Pull of object %ld to movable object is (%f, %f).\n",
+    // thread_index,
     //        pull.x, pull.y);
 
     usleep(200000);
